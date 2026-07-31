@@ -1,17 +1,31 @@
 import React, { useState, useEffect } from 'react';
+import { useLocation } from 'react-router-dom';
 import { api } from '../services/api';
 import { QuizRunner } from '../components/quiz/QuizRunner';
 import { CodingSandbox } from '../components/quiz/CodingSandbox';
-import { BrainCircuit, Code, Trophy, Timer, PlayCircle, Sparkles } from 'lucide-react';
+import { BrainCircuit, Code, Trophy, Timer, PlayCircle, Sparkles, Search, X } from 'lucide-react';
 
 export const QuizzesPage = () => {
+  const location = useLocation();
   const [quizzes, setQuizzes] = useState([]);
   const [activeQuiz, setActiveQuiz] = useState(null);
   const [activeCodingTest, setActiveCodingTest] = useState(null);
+  const [search, setSearch] = useState('');
 
   useEffect(() => {
     api.getQuizzes().then(setQuizzes);
   }, []);
+
+  useEffect(() => {
+    const params = new URLSearchParams(location.search);
+    setSearch(params.get('search') || '');
+  }, [location.search]);
+
+  const normalizedSearch = search.trim().toLowerCase();
+  const filteredQuizzes = quizzes.filter((qz) => {
+    const searchableText = `${qz.title || ''} ${qz.courseTitle || ''} ${qz.type || ''}`.toLowerCase();
+    return !normalizedSearch || searchableText.includes(normalizedSearch);
+  });
 
   if (activeQuiz) {
     return <QuizRunner quiz={activeQuiz} onFinish={() => setActiveQuiz(null)} />;
@@ -46,9 +60,35 @@ export const QuizzesPage = () => {
         </button>
       </div>
 
+      <div className="glass-card p-4 rounded-3xl border border-slate-800 flex items-center gap-3">
+        <div className="relative flex-1">
+          <Search className="w-4 h-4 text-slate-400 absolute left-3.5 top-3" />
+          <input
+            type="text"
+            placeholder="Search assessments or quizzes..."
+            value={search}
+            onChange={(e) => setSearch(e.target.value)}
+            className="w-full pl-10 pr-10 py-2 bg-slate-900 border border-slate-800 rounded-xl text-xs text-slate-100 focus:outline-none focus:border-purple-500"
+          />
+          {search && (
+            <button
+              type="button"
+              onClick={() => setSearch('')}
+              className="absolute right-3 top-2.5 text-slate-400 hover:text-white"
+            >
+              <X className="w-4 h-4" />
+            </button>
+          )}
+        </div>
+      </div>
+
       {/* Quizzes List */}
       <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-        {quizzes.map((qz) => (
+        {filteredQuizzes.length === 0 ? (
+          <div className="col-span-full glass-card rounded-3xl border border-slate-800 p-8 text-center text-sm text-slate-400">
+            No assessments match your current search. Try a different keyword or clear the search.
+          </div>
+        ) : filteredQuizzes.map((qz) => (
           <div key={qz._id} className="glass-card p-6 rounded-3xl border border-slate-800 space-y-4 hover:border-purple-500/40 transition-all flex flex-col justify-between">
             <div>
               <div className="flex items-center justify-between">

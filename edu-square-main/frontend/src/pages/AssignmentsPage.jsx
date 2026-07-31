@@ -1,18 +1,26 @@
 import React, { useState, useEffect } from 'react';
+import { useLocation } from 'react-router-dom';
 import { api } from '../services/api';
-import { FileCheck2, Calendar, PlusCircle, Send, CheckCircle, Clock, FileText } from 'lucide-react';
+import { FileCheck2, Calendar, PlusCircle, Send, CheckCircle, Clock, FileText, Search, X } from 'lucide-react';
 import { useAuth } from '../context/AuthContext';
 
 export const AssignmentsPage = () => {
   const { user } = useAuth();
+  const location = useLocation();
   const [assignments, setAssignments] = useState([]);
   const [activeTab, setActiveTab] = useState('all');
   const [showSubmitModal, setShowSubmitModal] = useState(null);
   const [submissionText, setSubmissionText] = useState('');
+  const [search, setSearch] = useState('');
 
   useEffect(() => {
     api.getAssignments().then(setAssignments);
   }, []);
+
+  useEffect(() => {
+    const params = new URLSearchParams(location.search);
+    setSearch(params.get('search') || '');
+  }, [location.search]);
 
   const handleSubmission = async (e) => {
     e.preventDefault();
@@ -23,6 +31,12 @@ export const AssignmentsPage = () => {
     setSubmissionText('');
     api.getAssignments().then(setAssignments);
   };
+
+  const normalizedSearch = search.trim().toLowerCase();
+  const filteredAssignments = assignments.filter((asg) => {
+    const searchableText = `${asg.title || ''} ${asg.description || ''} ${asg.courseTitle || ''}`.toLowerCase();
+    return !normalizedSearch || searchableText.includes(normalizedSearch);
+  });
 
   return (
     <div className="space-y-8 animate-in fade-in duration-300">
@@ -51,9 +65,35 @@ export const AssignmentsPage = () => {
         )}
       </div>
 
+      <div className="glass-card p-4 rounded-3xl border border-slate-800 flex items-center gap-3">
+        <div className="relative flex-1">
+          <Search className="w-4 h-4 text-slate-400 absolute left-3.5 top-3" />
+          <input
+            type="text"
+            placeholder="Search assignments or assessments..."
+            value={search}
+            onChange={(e) => setSearch(e.target.value)}
+            className="w-full pl-10 pr-10 py-2 bg-slate-900 border border-slate-800 rounded-xl text-xs text-slate-100 focus:outline-none focus:border-blue-500"
+          />
+          {search && (
+            <button
+              type="button"
+              onClick={() => setSearch('')}
+              className="absolute right-3 top-2.5 text-slate-400 hover:text-white"
+            >
+              <X className="w-4 h-4" />
+            </button>
+          )}
+        </div>
+      </div>
+
       {/* Assignments List */}
       <div className="space-y-4">
-        {assignments.map((asg) => {
+        {filteredAssignments.length === 0 ? (
+          <div className="glass-card rounded-3xl border border-slate-800 p-8 text-center text-sm text-slate-400">
+            No assignments or assessments match your current search. Try a different keyword or clear the search.
+          </div>
+        ) : filteredAssignments.map((asg) => {
           const isSubmitted = asg.submissions && asg.submissions.length > 0;
           return (
             <div key={asg._id} className="glass-card p-6 rounded-3xl border border-slate-800 space-y-4">

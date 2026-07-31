@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { Link, useNavigate } from 'react-router-dom';
+import { Link, useLocation, useNavigate } from 'react-router-dom';
 import { useAuth } from '../../context/AuthContext';
 import { ThemeToggle } from './ThemeToggle';
 import { RoleSwitcher } from './RoleSwitcher';
@@ -8,6 +8,7 @@ import { Search, Bell, Sparkles, LogOut, User, Menu, X, BookOpen } from 'lucide-
 export const Navbar = ({ toggleSidebar, isSidebarOpen }) => {
   const { user, logout } = useAuth();
   const navigate = useNavigate();
+  const location = useLocation();
   const [searchQuery, setSearchQuery] = useState('');
   const [showNotifications, setShowNotifications] = useState(false);
   const [showUserMenu, setShowUserMenu] = useState(false);
@@ -20,9 +21,25 @@ export const Navbar = ({ toggleSidebar, isSidebarOpen }) => {
 
   const handleSearchSubmit = (e) => {
     e.preventDefault();
-    if (searchQuery.trim()) {
-      navigate(`/courses?search=${encodeURIComponent(searchQuery)}`);
+    const query = searchQuery.trim();
+    if (!query) return;
+
+    const normalized = query.toLowerCase();
+    const isCourseQuery = /course|courses|class|lecture|lesson|module|subject|study|program/i.test(normalized);
+    const isAssignmentQuery = /assignment|assignments|task|tasks|homework|submission|submit|grade|grading/i.test(normalized);
+    const isAssessmentQuery = /assessment|assessments|quiz|quizzes|exam|exams|test|tests/i.test(normalized);
+
+    let targetPath = '/courses';
+    if (isAssignmentQuery) {
+      targetPath = '/assignments';
+    } else if (isAssessmentQuery) {
+      targetPath = '/quizzes';
+    } else if (isCourseQuery) {
+      targetPath = '/courses';
     }
+
+    setSearchQuery('');
+    navigate(`${targetPath}?search=${encodeURIComponent(query)}`);
   };
 
   return (
@@ -55,7 +72,7 @@ export const Navbar = ({ toggleSidebar, isSidebarOpen }) => {
           <Search className="w-4 h-4 text-slate-400 absolute left-3.5 top-3" />
           <input
             type="text"
-            placeholder="Search courses, assignments, AI topics..."
+            placeholder="Search courses, assessments, or AI topics..."
             value={searchQuery}
             onChange={(e) => setSearchQuery(e.target.value)}
             className="w-full pl-10 pr-4 py-2 bg-slate-900/60 dark:bg-slate-900 border border-slate-800 rounded-xl text-sm text-slate-200 placeholder-slate-500 focus:outline-none focus:border-blue-500/50 focus:ring-2 focus:ring-blue-500/20 transition-all"
