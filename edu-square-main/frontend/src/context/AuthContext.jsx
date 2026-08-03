@@ -2,6 +2,8 @@ import React, { createContext, useContext, useState } from 'react';
 
 const AuthContext = createContext();
 
+const normalizeEmail = (email) => email?.trim().toLowerCase();
+
 const DEMO_USERS = [
   {
     id: 'student-demo',
@@ -34,7 +36,8 @@ const getStoredUsers = () => {
   if (!savedUsers) return [];
 
   try {
-    return JSON.parse(savedUsers);
+    const parsed = JSON.parse(savedUsers);
+    return Array.isArray(parsed) ? parsed : [];
   } catch {
     return [];
   }
@@ -60,23 +63,29 @@ export const AuthProvider = ({ children }) => {
     const storedUsers = getStoredUsers();
     const savedUser = getSavedUser();
 
-    if (storedUsers.length > 0) {
-      if (savedUser && !storedUsers.some((u) => u.email === savedUser.email)) {
-        const mergedUsers = [...storedUsers, savedUser];
+    const normalizedStoredUsers = storedUsers.map((user) => ({
+      ...user,
+      email: normalizeEmail(user.email)
+    }));
+
+    if (normalizedStoredUsers.length > 0) {
+      if (savedUser && !normalizedStoredUsers.some((u) => u.email === normalizeEmail(savedUser.email))) {
+        const mergedUsers = [...normalizedStoredUsers, { ...savedUser, email: normalizeEmail(savedUser.email) }];
         saveUsers(mergedUsers);
         return mergedUsers;
       }
 
-      return storedUsers;
+      saveUsers(normalizedStoredUsers);
+      return normalizedStoredUsers;
     }
 
     if (savedUser) {
-      const seededUsers = [savedUser];
+      const seededUsers = [{ ...savedUser, email: normalizeEmail(savedUser.email) }];
       saveUsers(seededUsers);
       return seededUsers;
     }
 
-    const seededUsers = DEMO_USERS;
+    const seededUsers = DEMO_USERS.map((user) => ({ ...user, email: normalizeEmail(user.email) }));
     saveUsers(seededUsers);
     return seededUsers;
   });
@@ -85,8 +94,8 @@ export const AuthProvider = ({ children }) => {
   const [token, setToken] = useState(() => localStorage.getItem('edusphere_token') || null);
 
   const login = (email, password) => {
-    const normalizedEmail = email.trim().toLowerCase();
-    const matchedUser = users.find((u) => u.email === normalizedEmail);
+    const normalizedEmail = normalizeEmail(email);
+    const matchedUser = users.find((u) => normalizeEmail(u.email) === normalizedEmail);
 
     if (!matchedUser) {
       throw new Error('No account found for this email. Please register first or use one of the demo credentials.');
@@ -96,19 +105,20 @@ export const AuthProvider = ({ children }) => {
       throw new Error('Incorrect password. Please check your password and try again.');
     }
 
-    setUser(matchedUser);
+    const authenticatedUser = { ...matchedUser, email: normalizeEmail(matchedUser.email) };
+    setUser(authenticatedUser);
     setToken('demo_jwt_token');
 
-    localStorage.setItem('user', JSON.stringify(matchedUser));
+    localStorage.setItem('user', JSON.stringify(authenticatedUser));
     localStorage.setItem('edusphere_token', 'demo_jwt_token');
 
     return matchedUser;
   };
 
   const register = (name, email, password, role, department) => {
-    const normalizedEmail = email.trim().toLowerCase();
+    const normalizedEmail = normalizeEmail(email);
 
-    if (users.some((u) => u.email === normalizedEmail)) {
+    if (users.some((u) => normalizeEmail(u.email) === normalizedEmail)) {
       throw new Error('An account with this email already exists. Please sign in instead.');
     }
 
