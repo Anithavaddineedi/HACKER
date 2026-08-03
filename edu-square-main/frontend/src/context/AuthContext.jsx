@@ -4,6 +4,11 @@ const AuthContext = createContext();
 
 const normalizeEmail = (email) => email?.trim().toLowerCase();
 
+export const isValidEmail = (email) => {
+  const normalizedEmail = normalizeEmail(email);
+  return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(normalizedEmail || '');
+};
+
 const DEMO_USERS = [
   {
     id: 'student-demo',
@@ -94,6 +99,10 @@ export const AuthProvider = ({ children }) => {
   const [token, setToken] = useState(() => localStorage.getItem('edusphere_token') || null);
 
   const login = (email, password) => {
+    if (!isValidEmail(email)) {
+      throw new Error('Please enter a valid email address.');
+    }
+
     const normalizedEmail = normalizeEmail(email);
     const matchedUser = users.find((u) => normalizeEmail(u.email) === normalizedEmail);
 
@@ -116,6 +125,10 @@ export const AuthProvider = ({ children }) => {
   };
 
   const register = (name, email, password, role, department) => {
+    if (!isValidEmail(email)) {
+      throw new Error('Please enter a valid email address.');
+    }
+
     const normalizedEmail = normalizeEmail(email);
 
     if (users.some((u) => normalizeEmail(u.email) === normalizedEmail)) {

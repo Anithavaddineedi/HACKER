@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
-import { useAuth } from '../context/AuthContext';
+import { isValidEmail, useAuth } from '../context/AuthContext';
 import { Sparkles, Mail, Lock, ArrowRight, Shield, GraduationCap, UserCheck, Eye, EyeOff } from 'lucide-react';
 
 export const LoginPage = () => {
@@ -16,6 +16,11 @@ export const LoginPage = () => {
 
     if (!email.trim() || !password.trim()) {
       setError('Please enter both your email and password.');
+      return;
+    }
+
+    if (!isValidEmail(email)) {
+      setError('Please enter a valid email address such as name@gmail.com.');
       return;
     }
 
